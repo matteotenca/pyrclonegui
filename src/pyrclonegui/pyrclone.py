@@ -1,42 +1,33 @@
 import json
-import logging
 import shlex
 import subprocess
 import time
 import datetime
 from logging import Logger
 
-from PyQt6.QtCore import QStringListModel, QModelIndex, pyqtSlot, QVariant, QThreadPool
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
-from PyQt6 import QtCore
-from PyQt6.QtGui import QColor, QCloseEvent
-from typing import Optional
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtGui import QCloseEvent
+from typing import Optional, Any
 
 from ._qtuicwindow import Ui_MainWindow
-from ._table_model import TableModel
 
 
 class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
-    def __init__(self, **kwargs) -> None:
-        super(PyRcloneGui, self).__init__(**kwargs)
+    def __init__(self, parent: Optional[QMainWindow] = None) -> None:
+        super(PyRcloneGui, self).__init__(parent)
 
-        self.setupUi(MainWindow=self)
-        self.led.setLightColor(QColor.fromRgb(0, 255, 0))
-        self.led.setOn(False)
-        self.show()
+        self._mlog: Optional[Logger] = None
 
-        self._mlog = Logger(__name__)
-        self._mlog.addHandler(logging.FileHandler("r:\\logfile.log",encoding="utf-8"))
-        self._mlog.info("")
         self._cmd_quit_server = "rclone rc core/quit"
         self._cmd_quit_server_list = shlex.split(self._cmd_quit_server, posix=False)
         self._cmd_get_pid = "rclone rc core/pid"
         self._cmd_get_pid_list = shlex.split(self._cmd_get_pid, posix=False)
         self._cmd_listremotes = "rclone rc config/listremotes"
         self._cmd_listremotes_list = shlex.split(self._cmd_listremotes, posix=False)
-        self._cmd_start_server = "cmd /C rclone -v rcd --rc-no-auth --log-file r:\\rclone.log --no-console"
-        self._cmd_start_server_list = shlex.split(self._cmd_start_server, posix=False)
+        self._cmd_start_server: Optional[str] = None
+        self._cmd_start_server_list: Optional[list[str]] = None
         self._cmd_check_server = "rclone rc core/pid"
         self._cmd_check_server_list = shlex.split(self._cmd_check_server, posix=False)
         self._cmd_mount = "rclone rc mount/mount "
@@ -45,89 +36,23 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         self._cmd_unmount_list = shlex.split(self._cmd_unmount, posix=False)
         self._cmd_listmounts = "rclone rc mount/listmounts"
         self._cmd_listmounts_list = shlex.split(self._cmd_listmounts, posix=False)
-        self._cmd_set_vfs_main = 'rclone rc options/set --json "' + r"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}" + '"'
-        # self._cmd_set_vfs_main = r'rclone rc options/set --json "{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}"'
-        # self._cmd_set_vfs_main_list = shlex.split(self._cmd_set_vfs_main, posix=False)
-        self._cmd_set_vfs_main_list = ["rclone", "rc", "options/set", "--json", '"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\"}"']
 
+        self._cmd_set_vfs_main: Optional[str] = None
+        self._cmd_set_vfs_main_list: Optional[list[str]] = None
         self._remotes: list[str] = []
         self._two_dim_list: list[list[str]] = [[]]
         self._two_dim_list_r: list[list[str]] = [[]]
 
-        self.remotesActiveList.setModel(TableModel(self._two_dim_list_r))
-        self.remotesInactiveList.setModel(TableModel(self._two_dim_list))
-        self._col_list = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+        self._col_list = []
         self._col_list_cpy = self._col_list
-        self.threadpool = QThreadPool()
-
-        ress = self.async_send_cmd(self._cmd_check_server_list)
-        if ress:
-            self.serverToggleButton.setChecked(True)
 
     @pyqtSlot()
     def move_element_right(self) -> None:
-
-        model: TableModel = self.remotesInactiveList.model()
-        current_index: QModelIndex = self.remotesInactiveList.currentIndex()
-        current_row: QModelIndex = model.index(current_index.row(), 0)
-        current_row2: QModelIndex = model.index(current_index.row(), 1)
-        data = model.data(current_row)
-        data2 = model.data(current_row2)
-        if data is None or data2 is None or isinstance(data, QVariant) or isinstance(data2, QVariant):
-            return
-        ress = self.async_send_cmd(self._cmd_mount_list + [f"fs={data}:"] + [f"mountPoint={data2}:"], shell=False, capture_output=True)
-        if not ress:
-            msg = f"Mounting {data} on {data2}: returned failure"
-            title = "Warning!"
-            alert = QMessageBox()
-            alert.warning(self, title, msg, QMessageBox.StandardButton.Ok)
-            return
-
-        model.removeRow(current_index.row())
-
-        new_data = [list(a) for a in zip([data], [data2])]
-        self._two_dim_list_r.extend(new_data)
-        if len(self._two_dim_list_r[0]) == 0:
-            self._two_dim_list_r.pop(0)
-        self.remotesActiveList.setModel(TableModel(self._two_dim_list_r))
-        self.remotesInactiveList.setModel(model)
-        self.remotesInactiveList.update()
-        self.remotesActiveList.update()
+        pass
 
     @pyqtSlot()
     def move_element_left(self) -> None:
-
-        model: TableModel = self.remotesInactiveList.model()
-        active_model: TableModel = self.remotesActiveList.model()
-        current_index: QModelIndex = self.remotesActiveList.currentIndex()
-        current_row: QModelIndex = active_model.index(current_index.row(), 0)
-        current_row2: QModelIndex = active_model.index(current_index.row(), 1)
-        data = active_model.data(current_row)
-        data2 = active_model.data(current_row2)
-        if data is None or data2 is None or isinstance(data, QVariant) or isinstance(data2, QVariant):
-            return
-        ress = self.async_send_cmd(self._cmd_unmount_list + [f"mountPoint={data2}:"], shell=False, capture_output=True)
-        if not ress:
-            msg = f"Unmounting {data} on {data2}: returned failure"
-            title = "Warning!"
-            alert = QMessageBox()
-            alert.warning(self, title, msg, QMessageBox.StandardButton.Ok)
-            return
-        active_model.removeRow(current_index.row())
-
-        model_len = model.rowCount()
-
-        model_index = model.createIndex(model_len, 0)
-        model_index2 = model.createIndex(model_len, 1)
-        model.insertRow(model_len)
-
-        model.setData(model_index, data, QtCore.Qt.ItemDataRole.EditRole)
-        model.setData(model_index2, data2, QtCore.Qt.ItemDataRole.EditRole)
-        self.remotesInactiveList.setModel(model)
-        self.remotesInactiveList.update()
-        self.remotesActiveList.setModel(active_model)
-        self.remotesActiveList.update()
-
+        pass
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:
 
@@ -157,110 +82,23 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
     @pyqtSlot(bool)
     def toggle_server(self, b: bool) -> None:
-        led  = self.led
-        if led.isOn() != b:
-            if not b:
-                ress = self.async_send_cmd(self._cmd_listmounts_list, shell=False, capture_output=True)
-                if not ress:
-                    self.mylog("listmounts failed")
-                else:
-                    self.mylog("listmounts succeded")
-                if isinstance(ress, dict):
-                    mounts = ress.get("mountPoints", [])
-                    # mounted = []
-                    new_mounts = []
-                    for mount in mounts:
-                        name = mount.get("Fs", "").rstrip(":")
-                        mpoint = mount["MountPoint"].rstrip(":")
-                        ress = self.async_send_cmd(self._cmd_unmount_list + [f"mountPoint={mpoint}:"], shell=False, capture_output=True)
-                        if not ress:
-                            self.mylog(f"Unmounting {name} on {mpoint}: returned failure")
-                        # mounted.append(name)
-                        # self._remotes.remove(name)
-                        # new_mounts.append([name, mpoint])
-                ress = self.async_send_cmd(self._cmd_check_server_list, shell=False, capture_output=True)
-                if isinstance(ress, list) or ress == True:
-                    active_model: QStringListModel = self.remotesActiveList.model()
-                    coun = active_model.rowCount()
-                    for i in range(coun):
-                        index = active_model.index(i, 0)
-                        index2 = active_model.index(i, 1)
-                        data = index.data()
-                        data2 = index2.data()
-                        if data is None or data2 is None or isinstance(data, QVariant) or isinstance(data2, QVariant):
-                            continue
-                        ress = self.async_send_cmd(self._cmd_unmount_list + [f"mountPoint={data2}:"], shell=False, capture_output=True)
-                        if not ress:
-                            self.mylog(f"Unmounting {data} on {data2}: returned failure")
-                ress = self.async_send_cmd(self._cmd_quit_server_list, shell=False, capture_output=True)
-                if not ress:
-                    self.mylog("stopping server returned failure")
-                time.sleep(2)
-                self._two_dim_list = [[]]
-                self._two_dim_list_r = [[]]
-                qt_left_model = TableModel(self._two_dim_list)
-                self.remotesInactiveList.setModel(qt_left_model)
-                qt_right_model = TableModel(self._two_dim_list_r)
-                self.remotesActiveList.setModel(qt_right_model)
-                self._col_list = self._col_list_cpy
-            else:
-                ress = self.async_send_cmd(self._cmd_check_server_list, shell=False, capture_output=True)
-                if not ress:
-                    self.mylog(self._cmd_start_server)
-                    self.async_send_cmd(self._cmd_start_server, shell=True, capture_output=True, skip_waiting=True)
-                    self.mylog("server started")
-                    time.sleep(3)
-                self.mylog(self._cmd_check_server)
-                ress = self.async_send_cmd(self._cmd_check_server_list, shell=False, capture_output=True)
-                if not ress:
-                    self.mylog("check server failed")
-                else:
-                    self.mylog(self._cmd_set_vfs_main)
-                    ress = self.async_send_cmd(self._cmd_set_vfs_main, shell=True, capture_output=True)
-                    if not ress:
-                        self.mylog("setting vfs/main returned failure")
-                    self.mylog(self._cmd_listremotes)
-                    ress = self.async_send_cmd(self._cmd_listremotes_list, shell=False, capture_output=True)
-                    if not ress:
-                        self.mylog("listremotes failed")
-                    else:
-                        self.mylog(f"list remotes successful, {ress}")
-                    self.mylog("getting remotes from json and putting in self._remotes")
-                    self._remotes: list = ress.get("remotes", [])
-                    self.mylog("extending list")
-                    self._col_list.clear()
-                    self._col_list.extend(self.get_free_letters())
-                    self.mylog(f"ending loop, free letters: {self._col_list}")
-                    self.mylog(self._cmd_listmounts)
-                    ress = self.async_send_cmd(self._cmd_listmounts_list, shell=False, capture_output=True)
-                    if not ress:
-                        self.mylog("listmounts failed")
-                    else:
-                        self.mylog("listmounts succeded")
-                    if isinstance(ress, dict):
-                        mounts = ress.get("mountPoints", [])
-                        # mounted = []
-                        new_mounts = []
-                        for mount in mounts:
-                            name = mount.get("Fs", "").rstrip(":")
-                            mpoint = mount["MountPoint"].rstrip(":")
-                            # mounted.append(name)
-                            self._remotes.remove(name)
-                            new_mounts.append([name, mpoint])
-                        # self.mylog("mapping")
-                        # mapping = dict(zip(self._remotes, self._col_list))
-                        self._two_dim_list = [list(a) for a in zip(self._remotes, self._col_list)]
-                        self._two_dim_list_r = new_mounts if len(new_mounts) > 0 else self._two_dim_list_r
-                        qt_left_model = TableModel(self._two_dim_list)
-                        self.remotesInactiveList.setModel(qt_left_model)
-                        qt_right_model = TableModel(self._two_dim_list_r)
-                        self.remotesActiveList.setModel(qt_right_model)
-        led.setOn(b)
-
-
-    def left_item_selected(self, i: QModelIndex):
-        # TODO: switch to QTableWidget from QTableView
         pass
+
+    @pyqtSlot()
+    def left_item_sel_changed(self) -> None:
+        sel = self.remotesInactiveList.selectedItems()
+        if len(sel) > 0:
+            self.buttonToRight.setEnabled(True)
+        else:
+            self.buttonToRight.setEnabled(False)
+
+    @pyqtSlot()
+    def right_item_sel_changed(self) -> None:
+        sel = self.remotesActiveList.selectedItems()
+        if len(sel) > 0:
+            self.buttonToLeft.setEnabled(True)
+        else:
+            self.buttonToLeft.setEnabled(False)
 
     @staticmethod
     def send_cmd(cmd: list, shell: bool= False, capture_output: bool = True) -> bool:
@@ -280,6 +118,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
                 if ress.returncode != 0:
                     return outs
             else:
+                self.mylog(f"{cmd}")
                 ress  = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                 if not skip_waiting and ress is not None:
                     ress.wait(timeout=15)
@@ -305,6 +144,8 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         return outs
 
     def mylog(self, msg: str, *args) -> None:
+        if self._mlog is None:
+            return
         now = datetime.datetime.fromtimestamp(time.time()).isoformat(" ", timespec="seconds")
         msg = f"{now} {msg}"
         arg: str = ""
@@ -315,23 +156,117 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             msg = msg.strip(" ")
         self._mlog.info(msg)
 
-    def get_free_letters(self) -> list[str]:
-        import string
-        import win32api
-        import win32wnet
-        import win32netcon
+    @property
+    def cmd_listmounts(self) -> str:
+        return self._cmd_listmounts
 
-        drives = set(string.ascii_uppercase[2:])
-        for d in win32api.GetLogicalDriveStrings().split(':\\\x00'):
-            drives.discard(d)
-        # Discard persistent network drives, even if not connected.
-        henum = win32wnet.WNetOpenEnum(win32netcon.RESOURCE_REMEMBERED,
-                                       win32netcon.RESOURCETYPE_DISK, 0, win32wnet.NETRESOURCE())
-        while True:
-            result = win32wnet.WNetEnumResource(henum)
-            if not result:
-                break
-            for r in result:
-                if len(r.lpLocalName) == 2 and r.lpLocalName[1] == ':':
-                    drives.discard(r.lpLocalName[0])
-        return sorted(drives)
+    @property
+    def cmd_listmounts_list(self) -> list[str]:
+        return self._cmd_listmounts_list
+
+    @property
+    def cmd_unmount_list(self) -> list[str]:
+        return self._cmd_unmount_list
+
+    @property
+    def cmd_quit_server(self) -> str:
+        return self._cmd_quit_server
+
+    @property
+    def cmd_quit_server_list(self) -> list[str]:
+        return self._cmd_quit_server_list
+
+    @property
+    def col_list_cpy(self) -> list[Any]:
+        return self._col_list_cpy
+
+    @property
+    def cmd_check_server_list(self) -> list[str]:
+        return self._cmd_check_server_list
+
+    @property
+    def cmd_start_server(self) -> str | None:
+        return self._cmd_start_server
+    @cmd_start_server.setter
+    def cmd_start_server(self, value) -> None:
+        self._cmd_start_server = value
+
+    @property
+    def cmd_start_server_list(self) -> list[str] | None:
+        return self._cmd_start_server_list
+    @cmd_start_server_list.setter
+    def cmd_start_server_list(self, value) -> None:
+        self._cmd_start_server_list = value
+
+    @property
+    def cmd_check_server(self) -> str:
+        return self._cmd_check_server
+
+    @property
+    def cmd_listremotes(self) -> str:
+        return self._cmd_listremotes
+
+    @property
+    def cmd_listremotes_list(self) -> list[str]:
+        return self._cmd_listremotes_list
+
+    @property
+    def cmd_mount_list(self) -> list[str]:
+        return self._cmd_mount_list
+
+    @property
+    def cmd_mount(self) -> str:
+        return self._cmd_mount
+
+    @property
+    def col_list(self) -> list[Any]:
+        return self._col_list
+    @col_list.setter
+    def col_list(self, value) -> None:
+        self._col_list = value
+
+    @property
+    def remotes(self) -> list[str]:
+        return self._remotes
+    @remotes.setter
+    def remotes(self, remotes) -> None:
+        self._remotes = remotes
+
+    @property
+    def two_dim_list_r(self) -> list[list[str]]:
+        return self._two_dim_list_r
+    @two_dim_list_r.setter
+    def two_dim_list_r(self, value) -> None:
+        self._two_dim_list_r = value
+
+    @property
+    def two_dim_list(self) -> list[list[str]]:
+        return self._two_dim_list
+    @two_dim_list.setter
+    def two_dim_list(self, value) -> None:
+        self._two_dim_list = value
+
+    @property
+    def cmd_unmount(self) -> str:
+        return self._cmd_unmount
+
+    @property
+    def cmd_set_vfs_main(self) -> str | None:
+        return self._cmd_set_vfs_main
+    @cmd_set_vfs_main.setter
+    def cmd_set_vfs_main(self, value) -> None:
+        self._cmd_set_vfs_main = value
+
+    @property
+    def cmd_set_vfs_main_list(self) -> list[str] | None:
+        return self._cmd_set_vfs_main_list
+    @cmd_set_vfs_main_list.setter
+    def cmd_set_vfs_main_list(self, value) -> None:
+        self._cmd_set_vfs_main_list = value
+
+    @property
+    def mlog(self) -> Logger | None:
+        return self._mlog
+    @mlog.setter
+    def mlog(self, value) -> None:
+        self._mlog = value

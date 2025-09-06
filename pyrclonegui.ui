@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1024</width>
-    <height>768</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -72,8 +72,24 @@
       <item alignment="Qt::AlignmentFlag::AlignTop">
        <widget class="Led" name="led"/>
       </item>
+      <item alignment="Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop">
+       <widget class="QPushButton" name="pushButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string> </string>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
       <item>
-       <widget class="QTableView" name="remotesInactiveList">
+       <widget class="QTableWidget" name="remotesInactiveList">
         <property name="sizePolicy">
          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
           <horstretch>0</horstretch>
@@ -92,6 +108,38 @@
           <height>2000</height>
          </size>
         </property>
+        <property name="frameShape">
+         <enum>QFrame::Shape::StyledPanel</enum>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+        </property>
+        <property name="tabKeyNavigation">
+         <bool>false</bool>
+        </property>
+        <property name="showDropIndicator" stdset="0">
+         <bool>false</bool>
+        </property>
+        <property name="dragDropOverwriteMode">
+         <bool>false</bool>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+        </property>
+        <property name="columnCount">
+         <number>2</number>
+        </property>
+        <attribute name="horizontalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+        <attribute name="verticalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+        <column/>
+        <column/>
        </widget>
       </item>
       <item>
@@ -154,10 +202,39 @@
        </layout>
       </item>
       <item>
-       <widget class="QTableView" name="remotesActiveList">
+       <widget class="QTableWidget" name="remotesActiveList">
+        <property name="frameShape">
+         <enum>QFrame::Shape::StyledPanel</enum>
+        </property>
         <property name="editTriggers">
          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
         </property>
+        <property name="tabKeyNavigation">
+         <bool>false</bool>
+        </property>
+        <property name="showDropIndicator" stdset="0">
+         <bool>false</bool>
+        </property>
+        <property name="dragDropOverwriteMode">
+         <bool>false</bool>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+        </property>
+        <property name="columnCount">
+         <number>2</number>
+        </property>
+        <attribute name="horizontalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+        <attribute name="verticalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+        <column/>
+        <column/>
        </widget>
       </item>
      </layout>
@@ -169,7 +246,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1024</width>
+     <width>800</width>
      <height>22</height>
     </rect>
    </property>
@@ -199,8 +276,8 @@
    <slot>toggle_server(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>79</x>
-     <y>52</y>
+     <x>134</x>
+     <y>62</y>
     </hint>
     <hint type="destinationlabel">
      <x>78</x>
@@ -215,8 +292,8 @@
    <slot>move_element_right()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>591</x>
-     <y>366</y>
+     <x>532</x>
+     <y>297</y>
     </hint>
     <hint type="destinationlabel">
      <x>587</x>
@@ -231,12 +308,92 @@
    <slot>move_element_left()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>578</x>
-     <y>415</y>
+     <x>532</x>
+     <y>333</y>
     </hint>
     <hint type="destinationlabel">
      <x>593</x>
      <y>529</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remotesInactiveList</sender>
+   <signal>itemSelectionChanged()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>left_item_sel_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>281</x>
+     <y>428</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>82</x>
+     <y>409</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remotesInactiveList</sender>
+   <signal>cellDoubleClicked(int,int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>move_element_right()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>296</x>
+     <y>256</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>76</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remotesActiveList</sender>
+   <signal>cellDoubleClicked(int,int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>move_element_left()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>630</x>
+     <y>107</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>474</x>
+     <y>72</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>remotesActiveList</sender>
+   <signal>itemSelectionChanged()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>right_item_sel_changed()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>622</x>
+     <y>181</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>474</x>
+     <y>159</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>released()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>refresh_lists()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>206</x>
+     <y>52</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>209</x>
+     <y>155</y>
     </hint>
    </hints>
   </connection>
@@ -245,5 +402,8 @@
   <slot>move_element_right()</slot>
   <slot>move_element_left()</slot>
   <slot>toggle_server(bool)</slot>
+  <slot>left_item_sel_changed()</slot>
+  <slot>right_item_sel_changed()</slot>
+  <slot>refresh_lists()</slot>
  </slots>
 </ui>

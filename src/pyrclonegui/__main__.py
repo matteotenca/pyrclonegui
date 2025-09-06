@@ -1,18 +1,17 @@
 import sys
-from typing import Optional
 
-from PyQt6.QtWidgets import QApplication, QStyle, QStyleFactory
+from PyQt6.QtWidgets import QApplication
 
-from pyrclonegui import PyRcloneGui
+from pyrclonegui import PyRclone
 
 
 def _main() -> int:
     app = QApplication(sys.argv)
-    style: Optional[QStyle] = app.style()
-    if style is not None and style.name() == "windows11":
-        app.setStyle(QStyleFactory.create('Fusion'))
-    pyrclonegui = PyRcloneGui()
-    # pyrclonegui.show()
+    # style: Optional[QStyle] = app.style()
+    # if style is not None and style.name() == "windows11":
+    #     app.setStyle(QStyleFactory.create('Fusion'))
+    pyrcloneg = PyRclone()
+    pyrcloneg.show()
     return app.exec()
 
 

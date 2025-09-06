@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1024, 768)
+        MainWindow.resize(800, 600)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -41,7 +41,16 @@ class Ui_MainWindow(object):
         self.led = Led(parent=self.centralwidget)
         self.led.setObjectName("led")
         self.horizontalLayout.addWidget(self.led, 0, QtCore.Qt.AlignmentFlag.AlignTop)
-        self.remotesInactiveList = QtWidgets.QTableView(parent=self.centralwidget)
+        self.pushButton = QtWidgets.QPushButton(parent=self.centralwidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy)
+        self.pushButton.setFlat(False)
+        self.pushButton.setObjectName("pushButton")
+        self.horizontalLayout.addWidget(self.pushButton, 0, QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
+        self.remotesInactiveList = QtWidgets.QTableWidget(parent=self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -49,7 +58,18 @@ class Ui_MainWindow(object):
         self.remotesInactiveList.setSizePolicy(sizePolicy)
         self.remotesInactiveList.setMinimumSize(QtCore.QSize(100, 100))
         self.remotesInactiveList.setMaximumSize(QtCore.QSize(2000, 2000))
+        self.remotesInactiveList.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.remotesInactiveList.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.remotesInactiveList.setTabKeyNavigation(False)
+        self.remotesInactiveList.setProperty("showDropIndicator", False)
+        self.remotesInactiveList.setDragDropOverwriteMode(False)
+        self.remotesInactiveList.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.remotesInactiveList.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.remotesInactiveList.setColumnCount(2)
         self.remotesInactiveList.setObjectName("remotesInactiveList")
+        self.remotesInactiveList.setRowCount(0)
+        self.remotesInactiveList.horizontalHeader().setVisible(False)
+        self.remotesInactiveList.verticalHeader().setVisible(False)
         self.horizontalLayout.addWidget(self.remotesInactiveList)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setContentsMargins(5, -1, 5, -1)
@@ -72,14 +92,24 @@ class Ui_MainWindow(object):
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.verticalLayout.addItem(spacerItem1)
         self.horizontalLayout.addLayout(self.verticalLayout)
-        self.remotesActiveList = QtWidgets.QTableView(parent=self.centralwidget)
+        self.remotesActiveList = QtWidgets.QTableWidget(parent=self.centralwidget)
+        self.remotesActiveList.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
         self.remotesActiveList.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.remotesActiveList.setTabKeyNavigation(False)
+        self.remotesActiveList.setProperty("showDropIndicator", False)
+        self.remotesActiveList.setDragDropOverwriteMode(False)
+        self.remotesActiveList.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.remotesActiveList.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.remotesActiveList.setColumnCount(2)
         self.remotesActiveList.setObjectName("remotesActiveList")
+        self.remotesActiveList.setRowCount(0)
+        self.remotesActiveList.horizontalHeader().setVisible(False)
+        self.remotesActiveList.verticalHeader().setVisible(False)
         self.horizontalLayout.addWidget(self.remotesActiveList)
         self.horizontalLayout_2.addLayout(self.horizontalLayout)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1024, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
@@ -90,6 +120,11 @@ class Ui_MainWindow(object):
         self.serverToggleButton.toggled['bool'].connect(MainWindow.toggle_server) # type: ignore
         self.buttonToRight.released.connect(MainWindow.move_element_right) # type: ignore
         self.buttonToLeft.released.connect(MainWindow.move_element_left) # type: ignore
+        self.remotesInactiveList.itemSelectionChanged.connect(MainWindow.left_item_sel_changed) # type: ignore
+        self.remotesInactiveList.cellDoubleClicked['int','int'].connect(MainWindow.move_element_right) # type: ignore
+        self.remotesActiveList.cellDoubleClicked['int','int'].connect(MainWindow.move_element_left) # type: ignore
+        self.remotesActiveList.itemSelectionChanged.connect(MainWindow.right_item_sel_changed) # type: ignore
+        self.pushButton.released.connect(MainWindow.refresh_lists) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.serverToggleButton, self.remotesInactiveList)
         MainWindow.setTabOrder(self.remotesInactiveList, self.buttonToRight)
@@ -100,4 +135,5 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "pyRCloneGui"))
         self.serverToggleButton.setText(_translate("MainWindow", "Toggle Server ON/OFF"))
+        self.pushButton.setText(_translate("MainWindow", " "))
 from led import Led

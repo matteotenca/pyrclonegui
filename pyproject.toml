@@ -1,25 +1,9 @@
-#[tool.poetry]
-#name = "pyrclonegui"
-#version = "0.1.0"
-#description = ""
-#authors = ["Matteo Tenca <93343338+matteotenca@users.noreply.github.com>"]
-#readme = "README.md"
-#
-#[tool.poetry.dependencies]
-#python = "^3.13"
-
-
-#[build-system]
-#requires = ["poetry-core"]
-#build-backend = "poetry.core.masonry.api"
-
 [build-system]
 requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrclonegui"
-#version = "0.0.1"
 dynamic = ["version"]
 authors = [
     { name="Matteo Tenca", email="matteo.tenca@gmail.com" },
@@ -43,9 +27,13 @@ license-files = ["LICEN[CS]E*"]
 
 dependencies = [
     "PyQt6>=6.9.1",
+    "pywin32>=311; os_name == 'nt'"
 ]
 
 [project.gui-scripts]
+rclonegui = "pyrclonegui.__main__:_main"
+
+[project.scripts]
 rclonegui = "pyrclonegui.__main__:_main"
 
 [tool.setuptools.dynamic]
