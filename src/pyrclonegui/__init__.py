@@ -9,4 +9,4 @@ else:
     raise NotImplementedError(f"Unsupported OS: {system}")
 
 __all__ = ['PyRclone']
-__version__ = "0.0.5"
+__version__ = "0.0.7"

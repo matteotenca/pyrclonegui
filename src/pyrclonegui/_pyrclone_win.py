@@ -1,13 +1,14 @@
 import logging
 import shlex
 import string
+import tempfile
+import time
+from pathlib import Path
 from typing import Optional
 
 import win32api
-import win32wnet
 import win32netcon
-import time
-
+import win32wnet
 from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtCore import QVariant, QModelIndex, pyqtSlot
 from PyQt6.QtGui import QColor
@@ -24,14 +25,22 @@ class PyRcloneGuiWin(PyRcloneGui):
         self.buttonToLeft.setEnabled(False)
         self.buttonToRight.setEnabled(False)
         self.led.setOn(False)
-        self.cmd_set_vfs_main = 'rclone rc options/set --json "' + r"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}" + '"'
-        self.cmd_set_vfs_main_list = ["rclone", "rc", "options/set", "--json", '"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\"}"']
         self.mlog = logging.Logger(__name__)
-        self.mlog.addHandler(logging.FileHandler("r:\\logfile.log", encoding="utf-8"))
+        temp: str = f"{Path(tempfile.gettempdir()).joinpath('pyrclonegui.log').absolute()}"
+        self.mlog.addHandler(logging.FileHandler(temp, encoding="utf-8"))
         self.mylog("")
         self.mylog("")
-        self.cmd_start_server = "cmd /C rclone -v rcd --rc-no-auth --log-file r:\\rclone.log --no-console"
+
+        # self.cmd_set_vfs_main = 'rclone rc options/set --json "' + r"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 16, \"MultiThreadWriteBufferSize\": \"20M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"30G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}" + '"'
+        # self.cmd_set_vfs_main_list = ["rclone", "rc", "options/set", "--json",
+        #                               '"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\"}"']
+
+        temp: str = f"{Path(tempfile.gettempdir()).joinpath('rclone.log').absolute()}"
+        self.cmd_start_server = f"{self.rclone} -v rcd --rc-no-auth --log-file {temp} --no-console"
         self.cmd_start_server_list = shlex.split(self.cmd_start_server, posix=False)
+        self.cmd_set_vfs_main = f'{self.rclone} rc options/set --json "' + r"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 16, \"MultiThreadWriteBufferSize\": \"20M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"30G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}" + '"'
+        self.cmd_set_vfs_main_list = [{self.rclone}, "rc", "options/set", "--json",
+                                      '"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 8, \"MultiThreadWriteBufferSize\": \"2M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"3G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\"}"']
 
         hheader = self.remotesInactiveList.horizontalHeader()
         hheader.setStretchLastSection(True)
@@ -46,7 +55,7 @@ class PyRcloneGuiWin(PyRcloneGui):
 
     @pyqtSlot(bool)
     def toggle_server(self, b: bool) -> None:
-        led  = self.led
+        led = self.led
         if led.isOn() != b:
             if not b:
                 self.mylog(self.cmd_listmounts)
@@ -60,7 +69,8 @@ class PyRcloneGuiWin(PyRcloneGui):
                     for mount in mounts:
                         name = mount.get("Fs", "").rstrip(":")
                         mpoint = mount["MountPoint"].rstrip(":")
-                        ress = self.async_send_cmd(self.cmd_unmount_list + [f"mountPoint={mpoint}:"], shell=False, capture_output=True)
+                        ress = self.async_send_cmd(self.cmd_unmount_list + [
+                            f"mountPoint={mpoint}:"], shell=False, capture_output=True)
                         if not ress:
                             self.mylog(f"unmounting {name} on {mpoint}: returned failure")
                         else:
@@ -86,7 +96,6 @@ class PyRcloneGuiWin(PyRcloneGui):
                     if not ress:
                         self.mylog("setting vfs/main returned failure")
                 self.populate_lists()
-
 
         self.remotesInactiveList.resizeColumnsToContents()
         self.remotesActiveList.resizeColumnsToContents()
@@ -175,7 +184,8 @@ class PyRcloneGuiWin(PyRcloneGui):
         data2 = widg2.data(QtCore.Qt.ItemDataRole.DisplayRole)
         if data is None or data2 is None or isinstance(data, QVariant) or isinstance(data2, QVariant):
             return
-        ress = self.async_send_cmd(self.cmd_mount_list + [f"fs={data}:"] + [f"mountPoint={data2}:"], shell=False, capture_output=True)
+        ress = self.async_send_cmd(self.cmd_mount_list + [f"fs={data}:"] + [
+            f"mountPoint={data2}:"], shell=False, capture_output=True)
         if not ress:
             self.mylog(f"mounting {data} on {data2}: returned failure")
         else:
@@ -208,7 +218,8 @@ class PyRcloneGuiWin(PyRcloneGui):
         if data is None or data2 is None or isinstance(data, QVariant) or isinstance(data2, QVariant):
             return
         self.mylog(self.cmd_unmount)
-        ress = self.async_send_cmd(self.cmd_unmount_list + [f"mountPoint={data2}:"], shell=False, capture_output=True)
+        ress = self.async_send_cmd(self.cmd_unmount_list + [
+            f"mountPoint={data2}:"], shell=False, capture_output=True)
         if not ress:
             self.mylog(f"unmounting {data} on {data2}: returned failure")
         else:

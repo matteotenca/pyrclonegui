@@ -1,5 +1,7 @@
 import json
+import platform
 import shlex
+import shutil
 import subprocess
 import time
 import datetime
@@ -17,25 +19,25 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
     def __init__(self, parent: Optional[QMainWindow] = None) -> None:
         super(PyRcloneGui, self).__init__(parent)
-
+        self.system = platform.system().lower() == "windows"
         self._mlog: Optional[Logger] = None
-
-        self._cmd_quit_server = "rclone rc core/quit"
-        self._cmd_quit_server_list = shlex.split(self._cmd_quit_server, posix=False)
-        self._cmd_get_pid = "rclone rc core/pid"
-        self._cmd_get_pid_list = shlex.split(self._cmd_get_pid, posix=False)
-        self._cmd_listremotes = "rclone rc config/listremotes"
-        self._cmd_listremotes_list = shlex.split(self._cmd_listremotes, posix=False)
+        self.rclone = shutil.which("rclone")
+        self._cmd_quit_server = f"{self.rclone} rc core/quit"
+        self._cmd_quit_server_list = shlex.split(self._cmd_quit_server, posix=not self.system)
+        self._cmd_get_pid = f"{self.rclone} rc core/pid"
+        self._cmd_get_pid_list = shlex.split(self._cmd_get_pid, posix=not self.system)
+        self._cmd_listremotes = f"{self.rclone} rc config/listremotes"
+        self._cmd_listremotes_list = shlex.split(self._cmd_listremotes, posix=not self.system)
         self._cmd_start_server: Optional[str] = None
         self._cmd_start_server_list: Optional[list[str]] = None
-        self._cmd_check_server = "rclone rc core/pid"
-        self._cmd_check_server_list = shlex.split(self._cmd_check_server, posix=False)
-        self._cmd_mount = "rclone rc mount/mount "
-        self._cmd_mount_list = shlex.split(self._cmd_mount, posix=False)
-        self._cmd_unmount = "rclone rc mount/unmount "
-        self._cmd_unmount_list = shlex.split(self._cmd_unmount, posix=False)
-        self._cmd_listmounts = "rclone rc mount/listmounts"
-        self._cmd_listmounts_list = shlex.split(self._cmd_listmounts, posix=False)
+        self._cmd_check_server = f"{self.rclone} rc core/pid"
+        self._cmd_check_server_list = shlex.split(self._cmd_check_server, posix=not self.system)
+        self._cmd_mount = f"{self.rclone} rc mount/mount "
+        self._cmd_mount_list = shlex.split(self._cmd_mount, posix=not self.system)
+        self._cmd_unmount = f"{self.rclone} rc mount/unmount "
+        self._cmd_unmount_list = shlex.split(self._cmd_unmount, posix=not self.system)
+        self._cmd_listmounts = f"{self.rclone} rc mount/listmounts"
+        self._cmd_listmounts_list = shlex.split(self._cmd_listmounts, posix=not self.system)
 
         self._cmd_set_vfs_main: Optional[str] = None
         self._cmd_set_vfs_main_list: Optional[list[str]] = None
@@ -45,6 +47,11 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
         self._col_list = []
         self._col_list_cpy = self._col_list
+
+        self.creationflags = {}
+        if self.system:
+            self.creationflags = {"creationflags": subprocess.CREATE_NO_WINDOW}
+        # self.system = {"creationflags": subprocess.CREATE_NO_WINDOW} if platform.system().lower() == "windows" else {}
 
     @pyqtSlot()
     def move_element_right(self) -> None:
@@ -119,7 +126,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
                     return outs
             else:
                 self.mylog(f"{cmd}")
-                ress  = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                ress  = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **self.creationflags)
                 if not skip_waiting and ress is not None:
                     ress.wait(timeout=15)
                     if ress.returncode == 0:
