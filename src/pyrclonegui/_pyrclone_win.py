@@ -39,7 +39,7 @@ class PyRcloneGuiWin(PyRcloneGui):
         temp: str = f"{Path(tempfile.gettempdir()).joinpath('rclone.log').absolute()}"
         temp2 = Path(tempfile.gettempdir()).joinpath('rclone_cache').absolute()
         temp2.mkdir(exist_ok=True)
-        self.cmd_start_server = f"{self.rclone} -v --cache-dir {temp2} rcd --rc-no-auth --log-file {temp} --no-console"
+        self.cmd_start_server = f"{self.rclone} --cache-dir {temp2} rcd --rc-no-auth --log-file {temp} --no-console --log-level INFO"
         self.cmd_start_server_list = shlex.split(self.cmd_start_server, posix=False)
         self.cmd_set_vfs_main = f'{self.rclone} rc options/set --json "' + r"{\"main\": {\"Progress\": true, \"Transfers\": 16, \"MultiThreadChunkSize\": \"64M\", \"MultiThreadCutoff\": 131072, \"MultiThreadSet\": true, \"MultiThreadStreams\": 16, \"MultiThreadWriteBufferSize\": \"20M\"}, \"vfs\": {\"CacheMaxAge\": \"2m\", \"Links\": true, \"ChunkSize\": \"32M\", \"ChunkSizeLimit\": \"100G\", \"ChunkStreams\": 16, \"FastFingerprint\": true, \"CacheMaxSize\": \"30G\", \"CacheMode\": \"full\", \"Refresh\": true, \"WriteBack\": \"5s\" }}" + '"'
         # self.cmd_set_vfs_main_list = [{self.rclone}, "rc", "options/set", "--json",

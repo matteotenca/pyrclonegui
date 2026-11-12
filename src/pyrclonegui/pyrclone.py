@@ -2,7 +2,9 @@ import json
 from functools import cmp_to_key
 from locale import strcoll
 import subprocess
+import tempfile
 import time
+from pathlib import Path
 import datetime
 from urllib.parse import urljoin
 from logging import Logger
@@ -98,11 +100,19 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         self.menuView.insertAction(self.actionDarkMode, self.logDock.toggleViewAction())
         self.logDock.hide()
         self.logDock.visibilityChanged.connect(lambda _visible: QTimer.singleShot(0, self._fit_height))
+        self._rclone_log = Path(tempfile.gettempdir()) / "rclone.log"  # same file as --log-file in subclasses
+        self._rclone_log_pos = self._rclone_log.stat().st_size if self._rclone_log.exists() else 0
+        self._log_timer = QTimer(self)
+        self._log_timer.timeout.connect(self._tail_rclone_log)
+        self._log_timer.start(500)
         self._build_tray()
         settings = QSettings(SETTINGS_ORG, SETTINGS_APP)
         geometry = settings.value("geometry")
         if geometry is not None:
             self.restoreGeometry(geometry)
+        state = settings.value("state")  # log dock: visibility, floating, position, size
+        if state is not None:
+            self.restoreState(state)
         dark = settings.value("dark", False, type=bool)
         self.actionDarkMode.setChecked(bool(dark))
         self.set_dark(bool(dark))
@@ -360,7 +370,9 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
                 rs.close()
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:
-        QSettings(SETTINGS_ORG, SETTINGS_APP).setValue("geometry", self.saveGeometry())
+        settings = QSettings(SETTINGS_ORG, SETTINGS_APP)
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("state", self.saveState())
         if self.client is not None:
             self.client.close()
         if event:
@@ -386,9 +398,12 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         ok, _js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=1)
         if not ok:
             self.mylog("starting server")
-            self.async_send_cmd(self.cmd_start_server, shell=True, capture_output=True, skip_waiting=True)
-            time.sleep(self.server_start_delay)
-            ok, _js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=1)
+            self.async_send_cmd(self.cmd_start_server, shell=True, capture_output=False, skip_waiting=True)
+            # time.sleep(self.server_start_delay)
+            for i in range(5):
+                ok, _js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=1)
+                if ok:
+                    break
             if not ok:
                 self._notify("could not start rclone server (is rclone installed and in PATH?)")
                 return False
@@ -421,10 +436,10 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         # ress: subprocess.Popen
         try:
             if not capture_output:
-                ress = subprocess.Popen(cmd, shell=shell)
-                ress.wait(timeout=15)
-                if ress.returncode != 0:
-                    return outs
+                ress = subprocess.Popen(cmd, shell=shell, **self.creationflags)
+                # ress.wait(timeout=15)
+                # if ress.returncode == 0:
+                outs = True
             else:
                 # self.mylog(f"{cmd}")
                 # assert isinstance(cmd, list)
@@ -464,9 +479,26 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             msg = msg.strip(" ")
         if self.mlog is not None:
             self.mlog.info(msg)
-        log_view = getattr(self, "logView", None)
-        if log_view is not None:
-            log_view.appendPlainText(msg)
+
+    def _tail_rclone_log(self) -> None:
+        """Append new lines of rclone's own log file to the log dock."""
+        try:
+            size = self._rclone_log.stat().st_size
+            if size < self._rclone_log_pos:  # file truncated or rotated
+                self._rclone_log_pos = 0
+            if size == self._rclone_log_pos:
+                return
+            with open(self._rclone_log, "rb") as f:
+                f.seek(self._rclone_log_pos)
+                data = f.read()
+            # keep an incomplete last line for the next tick
+            end = data.rfind(b"\n") + 1
+            if end == 0:
+                return
+            self._rclone_log_pos += end
+            self.logView.appendPlainText(data[:end].decode("utf-8", "replace").rstrip())
+        except OSError:
+            pass
 
     # @property
     # def cmd_listmounts(self) -> str:
