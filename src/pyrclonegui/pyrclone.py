@@ -400,7 +400,9 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             self.mylog("starting server")
             self.async_send_cmd(self.cmd_start_server, shell=True, capture_output=False, skip_waiting=True)
             # time.sleep(self.server_start_delay)
-            for i in range(5):
+            # Linux refuses a closed port instantly (Windows retries for ~2 s), so pause between tries
+            for _ in range(10):
+                time.sleep(0.5)
                 ok, _js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=1)
                 if ok:
                     break
