@@ -27,6 +27,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
     tray: Optional[QSystemTrayIcon] = None
     server_start_delay = 1.0  # seconds to wait after launching rclone
     _dark = False
+    _notice_until = 0.0  # monotonic time until which a _notify() message stays in the status bar
 
     def __init__(self, parent: Optional[QMainWindow] = None) -> None:
         super(PyRcloneGui, self).__init__(parent)
@@ -211,7 +212,8 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         table.blockSignals(False)
         self.apply_filter(self.filterEdit.text())
         QTimer.singleShot(0, self._fit_height)
-        if self.serverToggleButton.isChecked():
+        # don't wipe a fresh _notify() error with the counter
+        if self.serverToggleButton.isChecked() and time.monotonic() > self._notice_until:
             self.statusbar.showMessage(f"{len(self.remotes)} remotes, {len(self.mounts)} mounted")
 
     @pyqtSlot(str)
@@ -256,6 +258,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
     def _notify(self, msg: str) -> None:
         self.mylog(msg)
+        self._notice_until = time.monotonic() + 8
         self.statusbar.showMessage(msg, 8000)
 
     def mount_remote(self, name: str) -> bool:
@@ -340,7 +343,9 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             self.mylog("httpx client is None")
             return False, {}
         try:
+            self._api_log(f"-> POST {url} {json.dumps(jargs)}")
             rs = self.client.post(url, json=jargs, timeout=timeout)
+            self._api_log(f"<- {rs.status_code} {rs.text.strip()}")
             try:
                 json_res = rs.json()
                 return rs.is_success, json_res
@@ -361,9 +366,11 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             #         raise json.JSONDecodeError(e.msg, e.doc, e.pos) from e
         except httpx.ConnectError as e:
             self.mylog(f"{e}")
+            self._api_log(f"<- connect error: {e}")
             return False, {}
         except httpx.TimeoutException as e:
             self.mylog(f"{e}")
+            self._api_log(f"<- timeout: {e}")
             return False, {}
         finally:
             if rs:
@@ -481,6 +488,11 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
             msg = msg.strip(" ")
         if self.mlog is not None:
             self.mlog.info(msg)
+
+    def _api_log(self, msg: str) -> None:
+        """Show an rc API request/response in the log dock (long bodies are cut)."""
+        now = datetime.datetime.now().strftime("%H:%M:%S")
+        self.logView.appendPlainText(f"{now} [api] {msg[:2000]}")
 
     def _tail_rclone_log(self) -> None:
         """Append new lines of rclone's own log file to the log dock."""
