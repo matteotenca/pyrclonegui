@@ -55,7 +55,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         self.creationflags: Dict = {} # type: ignore[type-arg]
         # self.cmd_set_vfs_main: Optional[str] = None
         # self.cmd_set_vfs_main_list: Optional[list[str]] = None
-
+        self.server: Optional(subprocess.Popen[str]) = None
         # if self.system:
         #     self.creationflags = {"creationflags": subprocess.CREATE_NO_WINDOW}
         # self.system = {"creationflags": subprocess.CREATE_NO_WINDOW} if platform.system().lower() == "windows" else {}
@@ -337,7 +337,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
 
     def net_send_cmd(self, url: str,
                      jargs: Dict[str, Union[Dict, List, str]], # type: ignore[type-arg]
-                    timeout: int = 4) -> Tuple[bool, Dict[str, Union[Dict, List, str]]]: # type: ignore[type-arg]
+                    timeout: int = 8) -> Tuple[bool, Dict[str, Union[Dict, List, str]]]: # type: ignore[type-arg]
         rs: Optional[httpx.Response] = None
         if self.client is None:
             self.mylog("httpx client is None")
@@ -436,6 +436,9 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         ok, _js = self.net_send_cmd(self.net_cmd_quit_server, {})
         self.mylog("stopping server " + ("succeded" if ok else "returned failure"))
         self.remotes, self.mounts, self.planned = [], {}, {}
+        if self.server is not None:
+            self.server.terminate()
+            self.server = None
         self._render()
 
     def async_send_cmd(self, cmd: Union[List, str, Sequence], shell: bool= False,  # type: ignore[type-arg]
@@ -448,7 +451,9 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
                 ress = subprocess.Popen(cmd, shell=shell, **self.creationflags)
                 # ress.wait(timeout=15)
                 # if ress.returncode == 0:
-                outs = True
+                self.server = ress
+                if self.server is not None:
+                    outs = True
             else:
                 # self.mylog(f"{cmd}")
                 # assert isinstance(cmd, list)
