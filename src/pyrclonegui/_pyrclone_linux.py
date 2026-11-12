@@ -29,7 +29,7 @@ class PyRcloneGuiLin(PyRcloneGui):
         temp: str = f"{Path(tempfile.gettempdir()).joinpath('rclone.log').absolute()}"
         temp2 = Path(tempfile.gettempdir()).joinpath('rclone_cache').absolute()
         temp2.mkdir(exist_ok=True)
-        self.cmd_start_server = f"{self.rclone} -v --cache-dir {temp2} rcd --rc-no-auth --log-file {temp}"
+        self.cmd_start_server = f"{self.rclone} --cache-dir {temp2} rcd --rc-no-auth --log-file {temp} --log-level INFO"
         self.cmd_start_server_list = shlex.split(self.cmd_start_server, posix=True)
 
 
@@ -56,7 +56,7 @@ class PyRcloneGuiLin(PyRcloneGui):
 
         # self.remotesInactiveList.resizeColumnsToContents()
 
-        self.client = httpx.Client()
+        self.client = httpx.Client(headers={"Content-Type": "application/json"})
         self.mylog("cheking if server is up")
         b, js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=3)
         if b:

@@ -63,7 +63,7 @@ class PyRcloneGuiWin(PyRcloneGui):
                     "Refresh": True,
                     "WriteBack": "5s"}}
         self.server_start_delay = 2.0
-        self.client = httpx.Client()
+        self.client = httpx.Client(headers={"Content-Type": "application/json"})
         self.mylog("cheking if server is up")
         b, js = self.net_send_cmd(self.net_cmd_check_server, {}, timeout=1)
         if b:
