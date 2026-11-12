@@ -21,7 +21,7 @@ command line. It makes the everyday job, mounting remotes as drives or folders, 
 
 ## Requirements
 
-- Python 3.9 or newer
+- Python 3.10 or newer
 - [rclone](https://rclone.org/downloads/) installed and available in `PATH`
 - Something that lets rclone mount:
   - Windows: [WinFsp](https://winfsp.dev)
