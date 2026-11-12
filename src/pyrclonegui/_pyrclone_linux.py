@@ -2,17 +2,12 @@ import logging
 import shlex
 import shutil
 import tempfile
-import time
-from functools import cmp_to_key
-from locale import strcoll
 from typing import Optional
 from pathlib import Path
 
 import httpx
-from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import pyqtSlot, QModelIndex, QVariant
-from PyQt6.QtGui import QColor, QCloseEvent
-from PyQt6.QtWidgets import QMainWindow, QTableWidgetItem
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QMainWindow
 
 from .pyrclone import PyRcloneGui
 
@@ -20,7 +15,7 @@ from .pyrclone import PyRcloneGui
 class PyRcloneGuiLin(PyRcloneGui):
     def __init__(self, parent: Optional[QMainWindow] = None) -> None:
         super().__init__(parent)
-        self.setupUi(MainWindow=self)  # type: ignore[no-untyped-call]
+        self.setupUi(MainWindow=self)
         self.led.setLightColor(QColor.fromRgb(0, 255, 0))
         self.led.setOn(False)
         self.creationflags = {}

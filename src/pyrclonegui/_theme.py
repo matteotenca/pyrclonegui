@@ -1,4 +1,5 @@
 """Application stylesheet (light/dark)."""
+from PyQt6.QtGui import QIcon
 
 LIGHT = dict(bg="#f4f6fa", panel="#ffffff", alt="#f7f9fc", text="#1f2430", muted="#6b7385", border="#dde2ea",
              accent="#3b6ef5", accent_hover="#2f5bd6", danger="#d9534f", danger_hover="#bf3f3b",
@@ -58,7 +59,7 @@ QToolTip {{ background: {c['panel']}; color: {c['text']}; border: 1px solid {c['
 """
 
 
-def app_icon():  # type: ignore[no-untyped-def]
+def app_icon() -> QIcon:
     """Window/tray icon drawn in code: white cloud on a blue rounded square."""
     from PyQt6.QtCore import QRectF, Qt
     from PyQt6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPainterPath, QPixmap

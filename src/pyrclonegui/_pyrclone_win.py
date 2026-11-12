@@ -4,19 +4,15 @@ import shutil
 import string
 import subprocess
 import tempfile
-import time
-import typing
 from pathlib import Path
-from typing import Optional, List, Any, Union, Dict, Tuple
+from typing import Optional
 
 import httpx
 import win32api
 import win32netcon
 import win32wnet
-from PyQt6 import QtCore, QtWidgets
-from PyQt6.QtCore import QVariant, QModelIndex, pyqtSlot
-from PyQt6.QtGui import QColor, QCloseEvent
-from PyQt6.QtWidgets import QTableWidgetItem, QMainWindow
+from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QMainWindow
 
 from .pyrclone import PyRcloneGui
 

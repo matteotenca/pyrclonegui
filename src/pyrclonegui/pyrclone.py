@@ -57,7 +57,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         #     self.creationflags = {"creationflags": subprocess.CREATE_NO_WINDOW}
         # self.system = {"creationflags": subprocess.CREATE_NO_WINDOW} if platform.system().lower() == "windows" else {}
 
-    def setupUi(self, MainWindow: QMainWindow) -> None:  # type: ignore[override]
+    def setupUi(self, MainWindow: QMainWindow) -> None:
         super().setupUi(MainWindow)  # type: ignore[no-untyped-call]
         self._polish()
 
@@ -81,7 +81,7 @@ class PyRcloneGui(QMainWindow, Ui_MainWindow):
         style = self.style()
         assert style is not None
         self.refreshButton.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
-        self.setWindowIcon(app_icon())
+        self.setWindowIcon(app_icon())  # type: ignore[no-untyped-call]
         table = self.remotesTable
         header = table.horizontalHeader()
         assert header is not None
